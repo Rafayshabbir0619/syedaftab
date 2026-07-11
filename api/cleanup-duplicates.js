@@ -42,6 +42,27 @@ async function supabaseDelete(path) {
   }
 }
 
+// Merge image lists from all rows in a duplicate group, deduplicating by filename.
+// A local filename ("u.jpg") and its uploaded Supabase URL both have the same basename,
+// so the Supabase URL (longer, already uploaded) wins — seen-set prevents double-entry.
+function mergeImages(rows) {
+  const seen = new Set();
+  const merged = [];
+  // Put the keeper's images first so its preferred URLs are kept over local names
+  for (const row of rows) {
+    const imgs = Array.isArray(row.record?.images) ? row.record.images : [];
+    for (const img of imgs) {
+      if (!img) continue;
+      const key = img.split('/').pop().toLowerCase();
+      if (!seen.has(key)) {
+        seen.add(key);
+        merged.push(img);
+      }
+    }
+  }
+  return merged;
+}
+
 module.exports = async function handler(req, res) {
   if (req.method !== 'POST') return sendError(res, 405, 'Method not allowed');
   if (!isAuthenticated(req)) return sendError(res, 401, 'Login required');
@@ -84,17 +105,43 @@ module.exports = async function handler(req, res) {
 
   for (const [, group] of groups) {
     if (group.length <= 1) continue;
+
     // Sort descending by sort_order — highest (most recently saved) first
     group.sort((a, b) => (b.sort_order || 0) - (a.sort_order || 0));
-    // Keep the first, delete the rest
-    for (let i = 1; i < group.length; i++) {
+    const keeper = group[0];
+    const toDelete = group.slice(1);
+
+    // Merge images from ALL rows into the keeper so no image reference is lost.
+    // Pass keeper first so its URLs take precedence over local filenames in stale rows.
+    const keeperFirst = [keeper, ...toDelete];
+    const mergedImages = mergeImages(keeperFirst);
+    const keeperImages = Array.isArray(keeper.record?.images) ? keeper.record.images : [];
+    const imagesChanged = mergedImages.length !== keeperImages.length ||
+      mergedImages.some((img, i) => img !== keeperImages[i]);
+
+    if (imagesChanged) {
+      try {
+        const updatedRecord = { ...keeper.record, images: mergedImages };
+        await supabasePatch(
+          `training_records?id=eq.${encodeURIComponent(keeper.id)}`,
+          { record: updatedRecord, updated_at: new Date().toISOString() }
+        );
+        keeper.record = updatedRecord;
+      } catch (err) {
+        results.errors.push(`Image merge for "${keeper.id}": ${err.message}`);
+        // Still proceed with deletion even if merge failed
+      }
+    }
+
+    // Delete the stale duplicate rows
+    for (const row of toDelete) {
       try {
         await supabaseDelete(
-          `training_records?id=eq.${encodeURIComponent(group[i].id)}`
+          `training_records?id=eq.${encodeURIComponent(row.id)}`
         );
         results.duplicatesRemoved++;
       } catch (err) {
-        results.errors.push(`Delete "${group[i].id}": ${err.message}`);
+        results.errors.push(`Delete "${row.id}": ${err.message}`);
       }
     }
   }

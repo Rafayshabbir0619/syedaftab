@@ -1700,6 +1700,14 @@
                             <input type="text" id="achievementTitle" required placeholder="Achievement title">
                         </div>
                         <div class="form-group">
+                            <label for="achievementType">Type *</label>
+                            <select id="achievementType" class="form-select" required>
+                                <option value="Achievement">Achievement</option>
+                                <option value="Seminar">Seminar / Training</option>
+                                <option value="Course">Courses / Trainings Completed</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
                             <label for="achievementCategory">Category *</label>
                             <div style="display: flex; gap: 8px;">
                                 <select id="achievementCategory" class="form-select" required style="flex: 1;">
@@ -1722,8 +1730,8 @@
                             <input type="date" id="achievementDate" required>
                         </div>
                         <div class="form-group full">
-                            <label for="achievementDescription">Description *</label>
-                            <textarea id="achievementDescription" required placeholder="Detailed description of the achievement"></textarea>
+                            <label for="achievementDescription">Description</label>
+                            <textarea id="achievementDescription" placeholder="Detailed description of the achievement (optional)"></textarea>
                         </div>
                         <div class="form-group full image-picker-block">
                             <label>Photos</label>
@@ -1740,6 +1748,22 @@
                             <p class="image-picker-hint">Upload images from your computer (saved to Supabase Storage) or add existing filenames. Saved values appear below.</p>
                             <textarea id="achievementImages" readonly placeholder="Saved images will appear here..."></textarea>
                             <div class="image-preview-grid" id="achievementImagePreview"></div>
+                        </div>
+                        <div class="form-group full image-picker-block">
+                            <label>Monogram / Seal (shown below the date)</label>
+                            <div class="image-picker-toolbar">
+                                <label class="image-upload-btn">
+                                    <input type="file" id="achievementMonogramFiles" accept="image/*">
+                                    <span>Select From Computer</span>
+                                </label>
+                                <div class="image-path-add">
+                                    <input type="text" id="achievementMonogramPath" placeholder="Or type filename e.g. seal1.jpg">
+                                    <button type="button" class="btn btn-secondary btn-small" onclick="addManualImagePath('achievementMonogram')">Add Path</button>
+                                </div>
+                            </div>
+                            <p class="image-picker-hint">One small logo/seal image. Prefer an existing local filename over uploading a new file when possible.</p>
+                            <textarea id="achievementMonogramImages" readonly placeholder="Saved image will appear here..."></textarea>
+                            <div class="image-preview-grid" id="achievementMonogramPreview"></div>
                         </div>
                     </div>
                     <div class="form-actions">
@@ -2300,6 +2324,7 @@
         const imagePickerConfig = {
             seminar: { fileInputId: 'seminarImageFiles', pathInputId: 'seminarImagePath', textareaId: 'seminarImages', previewId: 'seminarImagePreview', items: [] },
             achievement: { fileInputId: 'achievementImageFiles', pathInputId: 'achievementImagePath', textareaId: 'achievementImages', previewId: 'achievementImagePreview', items: [] },
+            achievementMonogram: { fileInputId: 'achievementMonogramFiles', pathInputId: 'achievementMonogramPath', textareaId: 'achievementMonogramImages', previewId: 'achievementMonogramPreview', items: [], single: true },
             certificate: { fileInputId: 'certImageFiles', pathInputId: 'certImagePath', textareaId: 'certImages', previewId: 'certImagePreview', items: [] },
             edit: { fileInputId: 'editImageFiles', pathInputId: 'editImagePath', textareaId: 'editImages', previewId: 'editImagePreview', items: [] },
             certMonogram: { fileInputId: 'certMonogramFiles', pathInputId: 'certMonogramPath', textareaId: 'certMonogramImages', previewId: 'certMonogramPreview', items: [], single: true },
@@ -2524,6 +2549,28 @@
             return '_' + Math.random().toString(36).substr(2, 9);
         }
 
+        // Derive a human-readable ID from the first uploaded image's original filename.
+        // Falls back to a random ID when no image has been added to the picker.
+        function generateIdFromImage(pickerKey) {
+            const items = imagePickerConfig[pickerKey]?.items || [];
+            const label = items[0]?.label;
+            if (label) {
+                const base = label
+                    .replace(/\.[^.]+$/, '')          // strip extension
+                    .toLowerCase()
+                    .replace(/[^a-z0-9]+/g, '-')      // non-alphanumeric → hyphen
+                    .replace(/^-+|-+$/g, '')           // trim leading/trailing hyphens
+                    .slice(0, 50);                     // cap length
+                if (base) {
+                    // Ensure uniqueness against currently loaded records
+                    if (!allRecords.some(r => r.id === base)) return base;
+                    const suffix = '-' + Math.random().toString(36).substr(2, 4);
+                    return base + suffix;
+                }
+            }
+            return generateId();
+        }
+
         async function handleLogin(event) {
             event.preventDefault();
             const username = document.getElementById('username').value;
@@ -2693,7 +2740,7 @@
             }
             
             const newRecord = {
-                id: generateId(),
+                id: generateIdFromImage('seminar'),
                 title: document.getElementById('seminarTitle').value,
                 category: category,
                 provider: document.getElementById('seminarProvider').value,
@@ -2721,7 +2768,7 @@
 
         async function handleAddAchievement(event) {
             event.preventDefault();
-            if (isPickerUploading('achievement')) {
+            if (isPickerUploading('achievement', 'achievementMonogram')) {
                 alert('Please wait for the image upload to finish before saving.');
                 return;
             }
@@ -2733,15 +2780,16 @@
                 showNewAchievementCategoryPanel();
                 return;
             }
-            
+
             if (!category) {
                 alert('Please select or create a category');
                 return;
             }
-            
+
             const newRecord = {
-                id: generateId(),
+                id: generateIdFromImage('achievement'),
                 title: document.getElementById('achievementTitle').value,
+                type: document.getElementById('achievementType').value,
                 category: category,
                 provider: document.getElementById('achievementProvider').value,
                 date: document.getElementById('achievementDate').value,
@@ -2749,7 +2797,7 @@
                 description: document.getElementById('achievementDescription').value,
                 certificateNo: '',
                 images: getImagePickerValues('achievement'),
-                type: 'Achievement'
+                monogram: getImagePickerValues('achievementMonogram')[0] || ''
             };
 
             removeDeletedRecordKey(getRecordKey(newRecord));
@@ -2762,6 +2810,7 @@
             document.getElementById('addAchievementForm').reset();
             hideNewAchievementCategoryPanel();
             clearImagePicker('achievement');
+            clearImagePicker('achievementMonogram');
             populateCategoryDropdown();
             await updateDashboard({ reload: false });
         }
@@ -2887,7 +2936,7 @@
             const successDiv = document.getElementById('certSuccess');
 
             const newRecord = {
-                id: generateId(),
+                id: generateIdFromImage('certificate'),
                 title: document.getElementById('certTitle').value,
                 category: document.getElementById('certCategory').value,
                 provider: document.getElementById('certProvider').value,
@@ -3357,6 +3406,7 @@
             document.getElementById('addAchievementForm').reset();
             hideNewAchievementCategoryPanel();
             clearImagePicker('achievement');
+            clearImagePicker('achievementMonogram');
         }
 
         function resetCertForm() {
