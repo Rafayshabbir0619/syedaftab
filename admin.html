@@ -1556,6 +1556,17 @@
             </div>
         </div>
 
+        <!-- Inactivity warning toast -->
+        <div id="inactivityWarning" style="display:none; position:fixed; bottom:28px; right:28px; z-index:9999;
+             background:#1e293b; color:#f1f5f9; padding:16px 20px; border-radius:16px;
+             box-shadow:0 8px 32px rgba(0,0,0,0.35); font-size:0.92rem; max-width:320px;
+             border-left:4px solid #f59e0b;">
+            <div style="font-weight:700; margin-bottom:6px;">Session expiring</div>
+            <div id="inactivityCountdown" style="color:#94a3b8; margin-bottom:12px;">You will be signed out in 60 seconds due to inactivity.</div>
+            <button onclick="resetInactivityTimer()" style="background:#2563eb; color:#fff; border:none; border-radius:8px;
+                    padding:8px 16px; font-size:0.88rem; font-weight:600; cursor:pointer;">Stay Signed In</button>
+        </div>
+
         <div class="tabs">
             <button class="tab-btn active" onclick="switchTab('dashboard')">Dashboard</button>
             <button class="tab-btn" onclick="switchTab('add-seminar')">Add Seminar</button>
@@ -1704,7 +1715,7 @@
                             <select id="achievementType" class="form-select" required>
                                 <option value="Achievement">Achievement</option>
                                 <option value="Seminar">Seminar / Training</option>
-                                <option value="Course">Courses / Trainings Completed</option>
+                                <option value="Course" selected>Courses / Trainings Completed</option>
                             </select>
                         </div>
                         <div class="form-group">
@@ -2307,6 +2318,7 @@
             document.getElementById('authLoading').style.display = 'none';
             document.getElementById('loginContainer').style.display = 'none';
             document.getElementById('adminPanel').style.display = 'block';
+            startInactivityWatch();
         }
 
         function wait(ms) {
@@ -2592,6 +2604,7 @@
         }
 
         async function handleLogout() {
+            stopInactivityWatch();
             stopBackgroundSync();
             await apiRequest('/api/auth/logout', { method: 'POST' }).catch(() => {});
             showLoginScreen();
@@ -3448,6 +3461,70 @@
                 closeEditModal();
             }
         });
+
+        // ── Inactivity auto-logout ──────────────────────────────────────────
+        const INACTIVITY_MS   = 5 * 60 * 1000;  // 5 minutes total
+        const WARNING_BEFORE  = 60 * 1000;       // show warning 60 s before logout
+        const WARNING_TICK_MS = 1000;
+
+        let inactivityTimer   = null;
+        let warningTimer      = null;
+        let countdownInterval = null;
+        let warningVisible    = false;
+
+        function resetInactivityTimer() {
+            clearTimeout(inactivityTimer);
+            clearTimeout(warningTimer);
+            clearInterval(countdownInterval);
+            hideInactivityWarning();
+            scheduleInactivityTimers();
+        }
+
+        function scheduleInactivityTimers() {
+            // Show warning 60 s before the 5-minute mark
+            warningTimer = setTimeout(() => showInactivityWarning(), INACTIVITY_MS - WARNING_BEFORE);
+            // Auto-logout at exactly 5 minutes
+            inactivityTimer = setTimeout(() => {
+                hideInactivityWarning();
+                handleLogout();
+            }, INACTIVITY_MS);
+        }
+
+        function showInactivityWarning() {
+            warningVisible = true;
+            const toast = document.getElementById('inactivityWarning');
+            const msg   = document.getElementById('inactivityCountdown');
+            toast.style.display = 'block';
+            let remaining = Math.round(WARNING_BEFORE / 1000);
+            msg.textContent = `You will be signed out in ${remaining} seconds due to inactivity.`;
+            countdownInterval = setInterval(() => {
+                remaining--;
+                if (remaining <= 0) { clearInterval(countdownInterval); return; }
+                msg.textContent = `You will be signed out in ${remaining} seconds due to inactivity.`;
+            }, WARNING_TICK_MS);
+        }
+
+        function hideInactivityWarning() {
+            warningVisible = false;
+            const toast = document.getElementById('inactivityWarning');
+            if (toast) toast.style.display = 'none';
+            clearInterval(countdownInterval);
+        }
+
+        function startInactivityWatch() {
+            const events = ['mousemove', 'mousedown', 'keydown', 'touchstart', 'scroll', 'click'];
+            events.forEach(e => document.addEventListener(e, resetInactivityTimer, { passive: true }));
+            scheduleInactivityTimers();
+        }
+
+        function stopInactivityWatch() {
+            clearTimeout(inactivityTimer);
+            clearTimeout(warningTimer);
+            clearInterval(countdownInterval);
+            hideInactivityWarning();
+            const events = ['mousemove', 'mousedown', 'keydown', 'touchstart', 'scroll', 'click'];
+            events.forEach(e => document.removeEventListener(e, resetInactivityTimer));
+        }
     </script>
 </body>
 </html>
