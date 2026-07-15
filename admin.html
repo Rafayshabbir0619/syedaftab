@@ -1573,6 +1573,7 @@
             <button class="tab-btn" onclick="switchTab('add-achievement')">Add Achievement</button>
             <button class="tab-btn" onclick="switchTab('add-certificate')">Add Certificate</button>
             <button class="tab-btn" onclick="switchTab('manage-certificates')">Manage Certificates</button>
+            <button class="tab-btn" onclick="switchTab('manage-achievements')">Manage Achievements</button>
             <button class="tab-btn" onclick="switchTab('manage-categories')">Manage Categories</button>
             <button class="tab-btn" onclick="switchTab('manage')">Manage All</button>
         </div>
@@ -1867,6 +1868,14 @@
             </div>
         </div>
 
+        <!-- Manage Achievements Tab -->
+        <div class="tab-content" id="manage-achievements">
+            <div class="dashboard-section">
+                <h3 class="section-title">Manage Achievements &amp; Courses</h3>
+                <div id="achievementRecordsContainer" class="records-grid"></div>
+            </div>
+        </div>
+
         <!-- Manage Categories Tab -->
         <div class="tab-content" id="manage-categories">
             <div class="form-container">
@@ -2024,6 +2033,7 @@
                 if (activeId === 'dashboard') await updateDashboard({ reload: false });
                 else if (activeId === 'manage') await loadAllRecords({ reload: false });
                 else if (activeId === 'manage-certificates') await loadCertificateRecords({ reload: false });
+                else if (activeId === 'manage-achievements') await loadAchievementRecords({ reload: false });
                 else if (activeId === 'manage-categories') renderCategories();
                 populateCategoryDropdown();
                 populateCertCategoryDropdown();
@@ -2485,6 +2495,7 @@
                 await loadAllRecords({ reload: true });
                 await Promise.all([
                     loadCertificateRecords({ reload: false }),
+                    loadAchievementRecords({ reload: false }),
                     updateDashboard({ reload: false })
                 ]);
             } catch (err) {
@@ -2629,6 +2640,8 @@
                 await loadAllRecords();
             } else if (tabName === 'manage-certificates') {
                 await loadCertificateRecords();
+            } else if (tabName === 'manage-achievements') {
+                await loadAchievementRecords();
             } else if (tabName === 'manage-categories') {
                 await loadCategories();
             } else if (tabName === 'add-certificate') {
@@ -2825,7 +2838,10 @@
             clearImagePicker('achievement');
             clearImagePicker('achievementMonogram');
             populateCategoryDropdown();
-            await updateDashboard({ reload: false });
+            await Promise.all([
+                loadAchievementRecords({ reload: false }),
+                updateDashboard({ reload: false })
+            ]);
         }
 
         function showNewCategoryPanel() {
@@ -3321,6 +3337,55 @@
             }).join('');
         }
 
+        async function loadAchievementRecords({ reload = true } = {}) {
+            const container = document.getElementById('achievementRecordsContainer');
+            if (reload || isRecordsStale()) {
+                container.innerHTML = loadingHTML('Loading achievements...');
+                await loadRecords();
+            }
+            const achievements = allRecords.filter(r => r.type === 'Achievement' || r.type === 'Course');
+
+            if (achievements.length === 0) {
+                container.innerHTML = '<div class="empty-state"><p>No achievements found. Add one from the Add Achievement tab.</p></div>';
+                return;
+            }
+
+            const byCategory = {};
+            achievements.forEach(record => {
+                const key = record.category || 'Uncategorized';
+                if (!byCategory[key]) byCategory[key] = [];
+                byCategory[key].push(record);
+            });
+
+            const sortedCategories = Object.keys(byCategory).sort((a, b) => a.localeCompare(b));
+
+            let overallIndex = 1;
+            container.innerHTML = sortedCategories.map((category, categoryIndex) => {
+                const items = [...byCategory[category]].sort((a, b) => new Date(b.date) - new Date(a.date));
+                const heading = `<div style="grid-column: 1 / -1; font-weight: 700; font-size: 1.05rem; margin: ${categoryIndex ? '12px' : '0'} 0 4px;">${categoryIndex + 1}. ${escapeHtml(category)}</div>`;
+                const cards = items.map(record => {
+                    const typeBadge = record.type === 'Course'
+                        ? `<div style="color: var(--teal); font-size: 0.8rem; font-weight: 700; margin-bottom: 4px;">Course / Training</div>`
+                        : `<div style="color: var(--purple); font-size: 0.8rem; font-weight: 700; margin-bottom: 4px;">Achievement</div>`;
+                    const card = `
+                <div class="record-card">
+                    ${typeBadge}
+                    <h4>${overallIndex}. ${escapeHtml(record.title)}</h4>
+                    <div class="record-meta">${formatDate(record.date)} | ${escapeHtml(record.provider)}</div>
+                    <div class="record-category">${escapeHtml(record.category)}</div>
+                    <div class="action-buttons">
+                        <button class="btn btn-secondary btn-small" onclick="openEditModal('${record.id}')">Edit</button>
+                        <button class="btn btn-danger btn-small" onclick="deleteRecord('${record.id}')">Delete</button>
+                    </div>
+                </div>
+            `;
+                    overallIndex++;
+                    return card;
+                }).join('');
+                return heading + cards;
+            }).join('');
+        }
+
         function openEditModal(recordId) {
             currentEditingId = recordId;
             const record = allRecords.find(r => r.id === recordId);
@@ -3385,6 +3450,7 @@
             await loadAllRecords({ reload: true });
             await Promise.all([
                 loadCertificateRecords({ reload: false }),
+                loadAchievementRecords({ reload: false }),
                 updateDashboard({ reload: false })
             ]);
             populateCategoryDropdown();
@@ -3404,6 +3470,7 @@
                 await Promise.all([
                     loadAllRecords({ reload: false }),
                     loadCertificateRecords({ reload: false }),
+                    loadAchievementRecords({ reload: false }),
                     updateDashboard({ reload: false })
                 ]);
             }
