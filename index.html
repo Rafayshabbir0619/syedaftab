@@ -1512,8 +1512,9 @@
             const urlType = new URLSearchParams(window.location.search).get('type');
             if (urlType) {
                 typeFilter.value = urlType;
-                const controlsEl = document.querySelector('.controls-section');
-                if (controlsEl) controlsEl.style.display = 'none';
+                // Hide only the type filter control so category/search remain usable
+                const typeFilterGroup = typeFilter.closest('.control-group');
+                if (typeFilterGroup) typeFilterGroup.style.display = 'none';
             }
             await refreshTrainingData();
             if (urlType) { populateCategoryOptions(); filterAndRender(); }
