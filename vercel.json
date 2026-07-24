@@ -1,4 +1,8 @@
 {
+  "cleanUrls": true,
+  "rewrites": [
+    { "source": "/courses", "destination": "/index.html?type=Course" }
+  ],
   "headers": [
     {
       "source": "/(index|admin).html",
