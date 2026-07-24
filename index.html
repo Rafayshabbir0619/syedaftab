@@ -1507,7 +1507,16 @@
         let isLoadingMore = false;
 
         async function init() {
+            // If a ?type= param is in the URL, lock the view to that type and
+            // hide the search/filter controls so the page looks like a dedicated section.
+            const urlType = new URLSearchParams(window.location.search).get('type');
+            if (urlType) {
+                typeFilter.value = urlType;
+                const controlsEl = document.querySelector('.controls-section');
+                if (controlsEl) controlsEl.style.display = 'none';
+            }
             await refreshTrainingData();
+            if (urlType) { populateCategoryOptions(); filterAndRender(); }
             attachEventListeners();
             setupShowMoreToggle();
             setupLiveDataRefresh();
