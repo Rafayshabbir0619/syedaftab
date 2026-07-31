@@ -2175,7 +2175,7 @@
                         <textarea id="editImages" readonly placeholder="Saved images will appear here..."></textarea>
                         <div class="image-preview-grid" id="editImagePreview"></div>
                     </div>
-                    <div class="form-group full image-picker-block">
+                    <div id="editMonogramSection" class="form-group full image-picker-block">
                         <label>Monogram / Seal (certificates only, shown below the date)</label>
                         <div class="image-picker-toolbar">
                             <label class="image-upload-btn">
@@ -3968,8 +3968,8 @@
                           ).join('')}</div>`
                         : '';
                     const monogramContent = record.monogram
-                        ? `<img class="training-monogram" src="${escapeHtml(record.monogram)}" alt="${escapeHtml(record.provider || '')} seal" loading="lazy" decoding="async">`
-                        : '<span class="cert-certno-empty">No monogram</span>';
+                        ? `<div class="cert-monogram-row"><img class="training-monogram" src="${escapeHtml(record.monogram)}" alt="${escapeHtml(record.provider || '')} seal" loading="lazy" decoding="async"></div>`
+                        : '';
                     const descriptionHtml = record.description
                         ? `<p class="training-description cert-field-display" style="margin-bottom:18px;">${escapeHtml(record.description)}</p>`
                         : `<span class="cert-certno-empty cert-field-display">+ Add description</span>`;
@@ -4002,10 +4002,7 @@
                                             <div class="training-date cert-field-display">${formatDate(record.date)}</div>
                                             <button class="cert-pencil" onclick="lctEditField('${rid}','date')" title="Edit date">✏️</button>
                                         </div>
-                                        <div class="cert-field-row cert-monogram-row" data-field="monogram">
-                                            <div class="cert-field-display">${monogramContent}</div>
-                                            <button class="cert-pencil" onclick="lctEditField('${rid}','monogram')" title="Edit monogram">✏️</button>
-                                        </div>
+                                        ${monogramContent}
                                     </div>
                                 </div>
 
@@ -4016,7 +4013,7 @@
 
                                 <div class="cert-field-row cert-images-row" data-field="images">
                                     <div class="cert-field-display" style="width:100%;">${galleryHtml}</div>
-                                    <button class="cert-pencil cert-pencil-block" onclick="lctEditField('${rid}','images')">✏️ Edit Images &amp; Monogram</button>
+                                    <button class="cert-pencil cert-pencil-block" onclick="lctEditField('${rid}','images')">✏️ Edit Images</button>
                                 </div>
 
                                 <div class="cert-action-bar">
@@ -4037,8 +4034,8 @@
             const record = allRecords.find(r => r.id === recordId);
             if (!record) return;
 
-            if (field === 'images' || field === 'monogram') {
-                openEditModal(recordId, true);
+            if (field === 'images') {
+                openEditModal(recordId, true, true);
                 return;
             }
 
@@ -4134,7 +4131,7 @@
 
         let _editImagesOnly = false;
 
-        function openEditModal(recordId, imagesOnly = false) {
+        function openEditModal(recordId, imagesOnly = false, hideMonogram = false) {
             currentEditingId = recordId;
             const record = allRecords.find(r => r.id === recordId);
 
@@ -4151,17 +4148,19 @@
                 setImagePickerItems('editMonogram', record.monogram ? [record.monogram] : []);
 
                 const metaSection = document.getElementById('editMetaSection');
+                const monogramSection = document.getElementById('editMonogramSection');
                 const form = document.getElementById('editForm');
                 const modalTitle = document.querySelector('#editModal h2');
                 if (imagesOnly) {
                     metaSection.style.display = 'none';
                     form.noValidate = true;
-                    modalTitle.textContent = 'Edit Images & Monogram';
+                    modalTitle.textContent = hideMonogram ? 'Edit Images' : 'Edit Images & Monogram';
                 } else {
                     metaSection.style.display = 'contents';
                     form.noValidate = false;
                     modalTitle.textContent = 'Edit Record';
                 }
+                monogramSection.style.display = hideMonogram ? 'none' : '';
 
                 document.getElementById('editModal').classList.add('show');
             }
@@ -4169,9 +4168,10 @@
 
         function closeEditModal() {
             document.getElementById('editModal').classList.remove('show');
-            // Restore meta section and validation for next open
             const metaSection = document.getElementById('editMetaSection');
             if (metaSection) metaSection.style.display = 'contents';
+            const monogramSection = document.getElementById('editMonogramSection');
+            if (monogramSection) monogramSection.style.display = '';
             const form = document.getElementById('editForm');
             if (form) form.noValidate = false;
             const modalTitle = document.querySelector('#editModal h2');
