@@ -799,6 +799,44 @@
             font-size: 0.8rem;
         }
 
+        /* ── Manage Lectures portfolio-style display ── */
+        #lectureRecordsContainer {
+            display: block;
+        }
+
+        /* Textarea inline editor keeps sizing correct */
+        .cert-inline-input[rows] {
+            resize: vertical;
+            min-height: 90px;
+        }
+
+        /* ── Manage Achievements portfolio-style display ── */
+        #achievementRecordsContainer {
+            display: block;
+        }
+
+        .achievement-highlight {
+            border-left: 4px solid #fbbf24;
+            background: linear-gradient(90deg, rgba(251, 191, 36, 0.06) 0%, transparent 80%);
+        }
+
+        .course-highlight {
+            border-left: 4px solid var(--teal);
+            background: linear-gradient(90deg, rgba(15, 118, 110, 0.05) 0%, transparent 80%);
+        }
+
+        .badge-achievement {
+            background: linear-gradient(135deg, rgba(251, 191, 36, 0.2), rgba(245, 158, 11, 0.2));
+            color: #b45309;
+            border: 1px solid rgba(217, 119, 6, 0.3);
+        }
+
+        .badge-course {
+            background: rgba(15, 118, 110, 0.12);
+            color: var(--teal);
+            border: 1px solid rgba(15, 118, 110, 0.25);
+        }
+
         /* ── Manage Certificates portfolio-style display ── */
         #certificateRecordsContainer {
             display: block;
@@ -1748,6 +1786,7 @@
             <button class="tab-btn" onclick="switchTab('add-certificate')">Add Certificate</button>
             <button class="tab-btn" onclick="switchTab('manage-certificates')">Manage Certificates</button>
             <button class="tab-btn" onclick="switchTab('manage-achievements')">Manage Achievements</button>
+            <button class="tab-btn" onclick="switchTab('manage-lectures')">Manage Lectures</button>
             <button class="tab-btn" onclick="switchTab('manage-categories')">Manage Categories</button>
             <button class="tab-btn" onclick="switchTab('manage')">Manage All</button>
         </div>
@@ -2050,6 +2089,14 @@
             </div>
         </div>
 
+        <!-- Manage Lectures Tab -->
+        <div class="tab-content" id="manage-lectures">
+            <div class="dashboard-section">
+                <h3 class="section-title">Manage Lectures Delivered</h3>
+                <div id="lectureRecordsContainer"></div>
+            </div>
+        </div>
+
         <!-- Manage Categories Tab -->
         <div class="tab-content" id="manage-categories">
             <div class="form-container">
@@ -2210,6 +2257,7 @@
                 else if (activeId === 'manage') await loadAllRecords({ reload: false });
                 else if (activeId === 'manage-certificates') await loadCertificateRecords({ reload: false });
                 else if (activeId === 'manage-achievements') await loadAchievementRecords({ reload: false });
+                else if (activeId === 'manage-lectures') await loadLectureRecords({ reload: false });
                 else if (activeId === 'manage-categories') renderCategories();
                 populateCategoryDropdown();
                 populateCertCategoryDropdown();
@@ -2672,6 +2720,7 @@
                 await Promise.all([
                     loadCertificateRecords({ reload: false }),
                     loadAchievementRecords({ reload: false }),
+                    loadLectureRecords({ reload: false }),
                     updateDashboard({ reload: false })
                 ]);
             } catch (err) {
@@ -2818,6 +2867,8 @@
                 await loadCertificateRecords();
             } else if (tabName === 'manage-achievements') {
                 await loadAchievementRecords();
+            } else if (tabName === 'manage-lectures') {
+                await loadLectureRecords();
             } else if (tabName === 'manage-categories') {
                 await loadCategories();
             } else if (tabName === 'add-certificate') {
@@ -2965,7 +3016,10 @@
             hideNewCategoryPanel();
             clearImagePicker('seminar');
             populateCategoryDropdown();
-            await updateDashboard({ reload: false });
+            await Promise.all([
+                loadLectureRecords({ reload: false }),
+                updateDashboard({ reload: false })
+            ]);
         }
 
         async function handleAddAchievement(event) {
@@ -3692,28 +3746,390 @@
             let overallIndex = 1;
             container.innerHTML = sortedCategories.map((category, categoryIndex) => {
                 const items = [...byCategory[category]].sort((a, b) => new Date(b.date) - new Date(a.date));
-                const heading = `<div style="grid-column: 1 / -1; font-weight: 700; font-size: 1.05rem; margin: ${categoryIndex ? '12px' : '0'} 0 4px;">${categoryIndex + 1}. ${escapeHtml(category)}</div>`;
+                const heading = `
+                    <div class="category-heading" style="margin: ${categoryIndex ? '28px' : '0'} 0 16px;">
+                        <span class="category-title">${categoryIndex + 1}. ${escapeHtml(category)}</span>
+                    </div>`;
                 const cards = items.map(record => {
-                    const typeBadge = record.type === 'Course'
-                        ? `<div style="color: var(--teal); font-size: 0.8rem; font-weight: 700; margin-bottom: 4px;">Course / Training</div>`
-                        : `<div style="color: var(--purple); font-size: 0.8rem; font-weight: 700; margin-bottom: 4px;">Achievement</div>`;
+                    const isCourse = record.type === 'Course';
+                    const highlightClass = isCourse ? 'course-highlight' : 'achievement-highlight';
+                    const badgeHtml = isCourse
+                        ? '<span class="badge badge-course">Course / Training</span>'
+                        : '<span class="badge badge-achievement">Achievement</span>';
+
+                    const images = Array.isArray(record.images) ? record.images.filter(Boolean) : [];
+                    const galleryHtml = images.length
+                        ? `<div class="gallery-grid">${images.map((src, idx) =>
+                            `<div class="gallery-card"><img src="${escapeHtml(src)}" alt="Photo ${idx + 1}" loading="lazy" decoding="async"><div class="gallery-pill">Photo ${idx + 1}</div></div>`
+                          ).join('')}</div>`
+                        : '';
+                    const monogramContent = record.monogram
+                        ? `<img class="training-monogram" src="${escapeHtml(record.monogram)}" alt="${escapeHtml(record.provider || '')} seal" loading="lazy" decoding="async">`
+                        : '<span class="cert-certno-empty">No monogram</span>';
+                    const rid = escapeHtml(record.id);
+
                     const card = `
-                <div class="record-card">
-                    ${typeBadge}
-                    <h4>${overallIndex}. ${escapeHtml(record.title)}</h4>
-                    <div class="record-meta">${formatDate(record.date)} | ${escapeHtml(record.provider)}</div>
-                    <div class="record-category">${escapeHtml(record.category)}</div>
-                    <div class="action-buttons">
-                        <button class="btn btn-secondary btn-small" onclick="openEditModal('${record.id}')">Edit</button>
-                        <button class="btn btn-danger btn-small" onclick="deleteRecord('${record.id}')">Delete</button>
-                    </div>
-                </div>
-            `;
+                        <div class="timeline-item" style="margin-bottom: 22px;">
+                            <div class="timeline-marker"><span class="marker-dot"></span></div>
+                            <div class="timeline-card ${highlightClass} ach-card" style="position: relative;" data-record-id="${rid}">
+                                <div class="training-top">
+                                    <div style="flex:1;min-width:0;">
+                                        <div class="cert-field-row" style="margin-bottom:10px;" data-field="type">
+                                            <div class="cert-field-display">${badgeHtml}</div>
+                                            <button class="cert-pencil" onclick="achEditField('${rid}','type')" title="Change type">✏️</button>
+                                        </div>
+
+                                        <div class="cert-field-row" data-field="title">
+                                            <h3 class="cert-field-display" style="margin-bottom:6px;">${overallIndex}. ${escapeHtml(record.title)}</h3>
+                                            <button class="cert-pencil" onclick="achEditField('${rid}','title')" title="Edit title">✏️</button>
+                                        </div>
+
+                                        <div class="cert-field-row" data-field="provider">
+                                            <p class="provider cert-field-display" style="margin-bottom:4px;">${escapeHtml(record.provider || '')}</p>
+                                            <button class="cert-pencil" onclick="achEditField('${rid}','provider')" title="Edit provider">✏️</button>
+                                        </div>
+
+                                        <div class="cert-field-row" data-field="category">
+                                            <span class="cert-cat-display cert-field-display">${escapeHtml(record.category || '')}</span>
+                                            <button class="cert-pencil" onclick="achEditField('${rid}','category')" title="Edit category">✏️</button>
+                                        </div>
+                                    </div>
+
+                                    <div class="training-date-block">
+                                        <div class="cert-field-row cert-date-row" data-field="date">
+                                            <div class="training-date cert-field-display">${formatDate(record.date)}</div>
+                                            <button class="cert-pencil" onclick="achEditField('${rid}','date')" title="Edit date">✏️</button>
+                                        </div>
+                                        <div class="cert-field-row cert-monogram-row" data-field="monogram">
+                                            <div class="cert-field-display">${monogramContent}</div>
+                                            <button class="cert-pencil" onclick="achEditField('${rid}','monogram')" title="Edit monogram">✏️</button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="cert-field-row cert-images-row" data-field="images">
+                                    <div class="cert-field-display" style="width:100%;">${galleryHtml}</div>
+                                    <button class="cert-pencil cert-pencil-block" onclick="achEditField('${rid}','images')">✏️ Edit Images &amp; Monogram</button>
+                                </div>
+
+                                <div class="cert-action-bar">
+                                    <button class="btn btn-danger btn-small" onclick="deleteRecord('${rid}')">Delete</button>
+                                </div>
+                            </div>
+                        </div>`;
                     overallIndex++;
                     return card;
                 }).join('');
                 return heading + cards;
             }).join('');
+        }
+
+        // ── Per-field inline edit for Manage Achievements ──
+
+        function achEditField(recordId, field) {
+            const card = document.querySelector(`.ach-card[data-record-id="${recordId}"]`);
+            if (!card) return;
+            const record = allRecords.find(r => r.id === recordId);
+            if (!record) return;
+
+            if (field === 'images' || field === 'monogram') {
+                openEditModal(recordId, true);
+                return;
+            }
+
+            const fieldRow = card.querySelector(`[data-field="${field}"]`);
+            if (!fieldRow || fieldRow.querySelector('.cert-inline-editor')) return;
+
+            const displayEl = fieldRow.querySelector('.cert-field-display');
+            const pencilBtn = fieldRow.querySelector('.cert-pencil');
+            if (!displayEl) return;
+
+            displayEl.style.display = 'none';
+            if (pencilBtn) pencilBtn.style.display = 'none';
+
+            let inputHtml;
+            if (field === 'title') {
+                inputHtml = `<input class="cert-inline-input" type="text" value="${escapeHtml(record.title)}" maxlength="200">`;
+            } else if (field === 'provider') {
+                inputHtml = `<input class="cert-inline-input" type="text" value="${escapeHtml(record.provider || '')}" maxlength="100" placeholder="Provider / Organisation">`;
+            } else if (field === 'date') {
+                inputHtml = `<input class="cert-inline-input" type="text" value="${escapeHtml(record.date || '')}" placeholder="YYYY or YYYY-MM-DD" maxlength="20">`;
+            } else if (field === 'category') {
+                const cats = getAllCategories();
+                const opts = cats.map(c => `<option value="${escapeHtml(c)}"${c === record.category ? ' selected' : ''}>${escapeHtml(c)}</option>`).join('');
+                inputHtml = `<select class="cert-inline-input">${opts}</select>`;
+            } else if (field === 'type') {
+                const types = ['Achievement', 'Course'];
+                const opts = types.map(t => `<option value="${t}"${t === record.type ? ' selected' : ''}>${t === 'Course' ? 'Course / Training' : 'Achievement'}</option>`).join('');
+                inputHtml = `<select class="cert-inline-input">${opts}</select>`;
+            } else {
+                displayEl.style.display = '';
+                if (pencilBtn) pencilBtn.style.display = '';
+                return;
+            }
+
+            const editor = document.createElement('div');
+            editor.className = 'cert-inline-editor';
+            editor.innerHTML = `
+                ${inputHtml}
+                <div class="cert-inline-actions">
+                    <button class="btn btn-primary btn-small" onclick="achSaveField('${escapeHtml(recordId)}','${field}',this)">✓ Save</button>
+                    <button class="btn btn-secondary btn-small" onclick="achCancelField('${escapeHtml(recordId)}','${field}')">✗ Cancel</button>
+                </div>`;
+            fieldRow.appendChild(editor);
+            editor.querySelector('.cert-inline-input')?.focus();
+        }
+
+        async function achSaveField(recordId, field, btnEl) {
+            const card = document.querySelector(`.ach-card[data-record-id="${recordId}"]`);
+            if (!card) return;
+            const record = allRecords.find(r => r.id === recordId);
+            if (!record) return;
+
+            const fieldRow = card.querySelector(`[data-field="${field}"]`);
+            if (!fieldRow) return;
+
+            const input = fieldRow.querySelector('.cert-inline-input');
+            if (!input) return;
+
+            const newValue = input.value.trim !== undefined ? input.value.trim() : input.value;
+
+            const origText = btnEl.textContent;
+            btnEl.textContent = '…';
+            btnEl.disabled = true;
+
+            const snapshot = { ...record };
+            record[field] = newValue;
+
+            try {
+                await saveRecord(record);
+            } catch (err) {
+                Object.assign(record, snapshot);
+                alert('Save failed: ' + err.message);
+                btnEl.textContent = origText;
+                btnEl.disabled = false;
+                return;
+            }
+
+            await loadAchievementRecords({ reload: false });
+        }
+
+        function achCancelField(recordId, field) {
+            const card = document.querySelector(`.ach-card[data-record-id="${recordId}"]`);
+            if (!card) return;
+            const fieldRow = card.querySelector(`[data-field="${field}"]`);
+            if (!fieldRow) return;
+
+            const displayEl = fieldRow.querySelector('.cert-field-display');
+            const pencilBtn = fieldRow.querySelector('.cert-pencil');
+            const editor = fieldRow.querySelector('.cert-inline-editor');
+
+            if (editor) editor.remove();
+            if (displayEl) displayEl.style.display = '';
+            if (pencilBtn) pencilBtn.style.display = '';
+        }
+
+        // ── Manage Lectures ──
+
+        async function loadLectureRecords({ reload = true } = {}) {
+            const container = document.getElementById('lectureRecordsContainer');
+            if (reload || isRecordsStale()) {
+                container.innerHTML = loadingHTML('Loading lectures...');
+                await loadRecords();
+            }
+            const lectures = allRecords.filter(r => r.type === 'Seminar');
+
+            if (lectures.length === 0) {
+                container.innerHTML = '<div class="empty-state"><p>No lectures found. Add one from the Add Seminar tab.</p></div>';
+                return;
+            }
+
+            const byCategory = {};
+            lectures.forEach(record => {
+                const key = record.category || 'Uncategorized';
+                if (!byCategory[key]) byCategory[key] = [];
+                byCategory[key].push(record);
+            });
+
+            const sortedCategories = Object.keys(byCategory).sort((a, b) => a.localeCompare(b));
+
+            let overallIndex = 1;
+            container.innerHTML = sortedCategories.map((category, categoryIndex) => {
+                const items = [...byCategory[category]].sort((a, b) => new Date(b.date) - new Date(a.date));
+                const heading = `
+                    <div class="category-heading" style="margin: ${categoryIndex ? '28px' : '0'} 0 16px;">
+                        <span class="category-title">${categoryIndex + 1}. ${escapeHtml(category)}</span>
+                    </div>`;
+                const cards = items.map(record => {
+                    const images = Array.isArray(record.images) ? record.images.filter(Boolean) : [];
+                    const galleryHtml = images.length
+                        ? `<div class="gallery-grid">${images.map((src, idx) =>
+                            `<div class="gallery-card"><img src="${escapeHtml(src)}" alt="Photo ${idx + 1}" loading="lazy" decoding="async"><div class="gallery-pill">Photo ${idx + 1}</div></div>`
+                          ).join('')}</div>`
+                        : '';
+                    const monogramContent = record.monogram
+                        ? `<img class="training-monogram" src="${escapeHtml(record.monogram)}" alt="${escapeHtml(record.provider || '')} seal" loading="lazy" decoding="async">`
+                        : '<span class="cert-certno-empty">No monogram</span>';
+                    const descriptionHtml = record.description
+                        ? `<p class="training-description cert-field-display" style="margin-bottom:18px;">${escapeHtml(record.description)}</p>`
+                        : `<span class="cert-certno-empty cert-field-display">+ Add description</span>`;
+                    const rid = escapeHtml(record.id);
+
+                    const card = `
+                        <div class="timeline-item" style="margin-bottom: 22px;">
+                            <div class="timeline-marker"><span class="marker-dot"></span></div>
+                            <div class="timeline-card lct-card" style="position: relative;" data-record-id="${rid}">
+                                <div class="training-top">
+                                    <div style="flex:1;min-width:0;">
+                                        <div class="cert-field-row" data-field="title">
+                                            <h3 class="cert-field-display" style="margin-bottom:6px;">${overallIndex}. ${escapeHtml(record.title)}</h3>
+                                            <button class="cert-pencil" onclick="lctEditField('${rid}','title')" title="Edit title">✏️</button>
+                                        </div>
+
+                                        <div class="cert-field-row" data-field="provider">
+                                            <p class="provider cert-field-display" style="margin-bottom:4px;">${escapeHtml(record.provider || '')}</p>
+                                            <button class="cert-pencil" onclick="lctEditField('${rid}','provider')" title="Edit provider">✏️</button>
+                                        </div>
+
+                                        <div class="cert-field-row" data-field="category">
+                                            <span class="cert-cat-display cert-field-display">${escapeHtml(record.category || '')}</span>
+                                            <button class="cert-pencil" onclick="lctEditField('${rid}','category')" title="Edit category">✏️</button>
+                                        </div>
+                                    </div>
+
+                                    <div class="training-date-block">
+                                        <div class="cert-field-row cert-date-row" data-field="date">
+                                            <div class="training-date cert-field-display">${formatDate(record.date)}</div>
+                                            <button class="cert-pencil" onclick="lctEditField('${rid}','date')" title="Edit date">✏️</button>
+                                        </div>
+                                        <div class="cert-field-row cert-monogram-row" data-field="monogram">
+                                            <div class="cert-field-display">${monogramContent}</div>
+                                            <button class="cert-pencil" onclick="lctEditField('${rid}','monogram')" title="Edit monogram">✏️</button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="cert-field-row" style="margin-bottom:18px;" data-field="description">
+                                    ${descriptionHtml}
+                                    <button class="cert-pencil" onclick="lctEditField('${rid}','description')" title="Edit description">✏️</button>
+                                </div>
+
+                                <div class="cert-field-row cert-images-row" data-field="images">
+                                    <div class="cert-field-display" style="width:100%;">${galleryHtml}</div>
+                                    <button class="cert-pencil cert-pencil-block" onclick="lctEditField('${rid}','images')">✏️ Edit Images &amp; Monogram</button>
+                                </div>
+
+                                <div class="cert-action-bar">
+                                    <button class="btn btn-danger btn-small" onclick="deleteRecord('${rid}')">Delete</button>
+                                </div>
+                            </div>
+                        </div>`;
+                    overallIndex++;
+                    return card;
+                }).join('');
+                return heading + cards;
+            }).join('');
+        }
+
+        function lctEditField(recordId, field) {
+            const card = document.querySelector(`.lct-card[data-record-id="${recordId}"]`);
+            if (!card) return;
+            const record = allRecords.find(r => r.id === recordId);
+            if (!record) return;
+
+            if (field === 'images' || field === 'monogram') {
+                openEditModal(recordId, true);
+                return;
+            }
+
+            const fieldRow = card.querySelector(`[data-field="${field}"]`);
+            if (!fieldRow || fieldRow.querySelector('.cert-inline-editor')) return;
+
+            const displayEl = fieldRow.querySelector('.cert-field-display');
+            const pencilBtn = fieldRow.querySelector('.cert-pencil');
+            if (!displayEl) return;
+
+            displayEl.style.display = 'none';
+            if (pencilBtn) pencilBtn.style.display = 'none';
+
+            let inputHtml;
+            if (field === 'title') {
+                inputHtml = `<input class="cert-inline-input" type="text" value="${escapeHtml(record.title)}" maxlength="200">`;
+            } else if (field === 'provider') {
+                inputHtml = `<input class="cert-inline-input" type="text" value="${escapeHtml(record.provider || '')}" maxlength="100" placeholder="Provider / Organisation">`;
+            } else if (field === 'date') {
+                inputHtml = `<input class="cert-inline-input" type="text" value="${escapeHtml(record.date || '')}" placeholder="YYYY or YYYY-MM-DD" maxlength="20">`;
+            } else if (field === 'category') {
+                const cats = getAllCategories();
+                const opts = cats.map(c => `<option value="${escapeHtml(c)}"${c === record.category ? ' selected' : ''}>${escapeHtml(c)}</option>`).join('');
+                inputHtml = `<select class="cert-inline-input">${opts}</select>`;
+            } else if (field === 'description') {
+                inputHtml = `<textarea class="cert-inline-input" rows="4" maxlength="2000" placeholder="Description of the lecture...">${escapeHtml(record.description || '')}</textarea>`;
+            } else {
+                displayEl.style.display = '';
+                if (pencilBtn) pencilBtn.style.display = '';
+                return;
+            }
+
+            const editor = document.createElement('div');
+            editor.className = 'cert-inline-editor';
+            editor.innerHTML = `
+                ${inputHtml}
+                <div class="cert-inline-actions">
+                    <button class="btn btn-primary btn-small" onclick="lctSaveField('${escapeHtml(recordId)}','${field}',this)">✓ Save</button>
+                    <button class="btn btn-secondary btn-small" onclick="lctCancelField('${escapeHtml(recordId)}','${field}')">✗ Cancel</button>
+                </div>`;
+            fieldRow.appendChild(editor);
+            editor.querySelector('.cert-inline-input')?.focus();
+        }
+
+        async function lctSaveField(recordId, field, btnEl) {
+            const card = document.querySelector(`.lct-card[data-record-id="${recordId}"]`);
+            if (!card) return;
+            const record = allRecords.find(r => r.id === recordId);
+            if (!record) return;
+
+            const fieldRow = card.querySelector(`[data-field="${field}"]`);
+            if (!fieldRow) return;
+
+            const input = fieldRow.querySelector('.cert-inline-input');
+            if (!input) return;
+
+            const newValue = input.tagName === 'TEXTAREA' ? input.value : input.value.trim();
+
+            const origText = btnEl.textContent;
+            btnEl.textContent = '…';
+            btnEl.disabled = true;
+
+            const snapshot = { ...record };
+            record[field] = newValue;
+
+            try {
+                await saveRecord(record);
+            } catch (err) {
+                Object.assign(record, snapshot);
+                alert('Save failed: ' + err.message);
+                btnEl.textContent = origText;
+                btnEl.disabled = false;
+                return;
+            }
+
+            await loadLectureRecords({ reload: false });
+        }
+
+        function lctCancelField(recordId, field) {
+            const card = document.querySelector(`.lct-card[data-record-id="${recordId}"]`);
+            if (!card) return;
+            const fieldRow = card.querySelector(`[data-field="${field}"]`);
+            if (!fieldRow) return;
+
+            const displayEl = fieldRow.querySelector('.cert-field-display');
+            const pencilBtn = fieldRow.querySelector('.cert-pencil');
+            const editor = fieldRow.querySelector('.cert-inline-editor');
+
+            if (editor) editor.remove();
+            if (displayEl) displayEl.style.display = '';
+            if (pencilBtn) pencilBtn.style.display = '';
         }
 
         let _editImagesOnly = false;
@@ -3805,6 +4221,7 @@
             await Promise.all([
                 loadCertificateRecords({ reload: false }),
                 loadAchievementRecords({ reload: false }),
+                loadLectureRecords({ reload: false }),
                 updateDashboard({ reload: false })
             ]);
             populateCategoryDropdown();
@@ -3825,6 +4242,7 @@
                     loadAllRecords({ reload: false }),
                     loadCertificateRecords({ reload: false }),
                     loadAchievementRecords({ reload: false }),
+                    loadLectureRecords({ reload: false }),
                     updateDashboard({ reload: false })
                 ]);
             }
