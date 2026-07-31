@@ -599,8 +599,10 @@
         }
 
         .provider {
-            color: var(--indigo);
+            color: #d97706;
             font-size: 0.96rem;
+            font-weight: 700;
+            letter-spacing: 0.3px;
             margin-bottom: 6px;
         }
 
@@ -795,6 +797,62 @@
             border-radius: 999px;
             padding: 8px 14px;
             font-size: 0.8rem;
+        }
+
+        /* ── Manage Certificates portfolio-style display ── */
+        #certificateRecordsContainer {
+            display: block;
+        }
+
+        .certificate-highlight {
+            border-left: 4px solid var(--indigo);
+            background: linear-gradient(90deg, rgba(37, 99, 235, 0.05) 0%, transparent 80%);
+        }
+
+        .certificate-highlight .training-top {
+            margin-bottom: 6px;
+        }
+
+        .badge-certificate {
+            background: rgba(37, 99, 235, 0.12);
+            color: var(--indigo);
+            border: 1px solid rgba(37, 99, 235, 0.25);
+        }
+
+        .training-date-block {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 10px;
+            flex-shrink: 0;
+        }
+
+        .training-monogram {
+            max-width: 84px;
+            max-height: 84px;
+            width: auto;
+            height: auto;
+            border-radius: 8px;
+            object-fit: contain;
+            border: 2px solid rgba(37, 99, 235, 0.2);
+            box-shadow: 0 8px 18px rgba(15, 23, 42, 0.1);
+            background: #fff;
+        }
+
+        .certificate-line {
+            color: var(--indigo);
+            font-size: 0.88rem;
+            font-weight: 600;
+            margin-bottom: 14px;
+        }
+
+        .cert-action-bar {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            margin-top: 18px;
+            padding-top: 14px;
+            border-top: 1px solid rgba(15, 23, 42, 0.07);
         }
 
         .image-picker-block {
@@ -3298,7 +3356,6 @@
                 return;
             }
 
-            // Group by category, ordered the same way as the portfolio section
             const byCategory = {};
             certificates.forEach(record => {
                 const categoryKey = record.category || 'Uncategorized';
@@ -3316,20 +3373,47 @@
             let overallIndex = 1;
             container.innerHTML = sortedCategories.map((category, categoryIndex) => {
                 const categoryItems = [...byCategory[category]].sort((a, b) => new Date(b.date) - new Date(a.date));
-                const heading = `<div style="grid-column: 1 / -1; font-weight: 700; font-size: 1.05rem; margin: ${categoryIndex ? '12px' : '0'} 0 4px;">${categoryIndex + 1}. ${escapeHtml(category)}</div>`;
+                const heading = `
+                    <div class="category-heading" style="margin: ${categoryIndex ? '28px' : '0'} 0 16px;">
+                        <span class="category-title">${categoryIndex + 1}. ${escapeHtml(category)}</span>
+                    </div>`;
                 const cards = categoryItems.map(record => {
+                    const images = Array.isArray(record.images) ? record.images.filter(Boolean) : [];
+                    const galleryHtml = images.length
+                        ? `<div class="gallery-grid">${images.map((src, idx) =>
+                            `<div class="gallery-card"><img src="${escapeHtml(src)}" alt="Photo ${idx + 1}" loading="lazy" decoding="async"><div class="gallery-pill">Photo ${idx + 1}</div></div>`
+                          ).join('')}</div>`
+                        : '';
+                    const monogramHtml = record.monogram
+                        ? `<img class="training-monogram" src="${escapeHtml(record.monogram)}" alt="${escapeHtml(record.provider || '')} seal" loading="lazy" decoding="async">`
+                        : '';
+                    const certNoHtml = record.certificateNo
+                        ? `<div class="certificate-line">Certificate No: ${escapeHtml(record.certificateNo)}</div>`
+                        : '';
+
                     const card = `
-                <div class="record-card">
-                    <h4>${overallIndex}. ${escapeHtml(record.title)}</h4>
-                    <div class="record-meta">${formatDate(record.date)} | ${escapeHtml(record.provider)}</div>
-                    <div class="record-category">${escapeHtml(record.category)}</div>
-                    ${record.certificateNo ? `<div style="color: var(--green); font-size: 0.85rem; margin-bottom: 8px;">Certificate No: ${escapeHtml(record.certificateNo)}</div>` : ''}
-                    <div class="action-buttons">
-                        <button class="btn btn-secondary btn-small" onclick="openEditModal('${record.id}')">Edit</button>
-                        <button class="btn btn-danger btn-small" onclick="deleteRecord('${record.id}')">Delete</button>
-                    </div>
-                </div>
-            `;
+                        <div class="timeline-item" style="margin-bottom: 22px;">
+                            <div class="timeline-marker"><span class="marker-dot"></span></div>
+                            <div class="timeline-card certificate-highlight" style="position: relative;">
+                                <div class="training-top">
+                                    <div>
+                                        <span class="badge badge-certificate">Certificate</span>
+                                        <h3>${overallIndex}. ${escapeHtml(record.title)}</h3>
+                                        <p class="provider">${escapeHtml(record.provider || '')}</p>
+                                    </div>
+                                    <div class="training-date-block">
+                                        <div class="training-date">${formatDate(record.date)}</div>
+                                        ${monogramHtml}
+                                    </div>
+                                </div>
+                                ${certNoHtml}
+                                ${galleryHtml}
+                                <div class="cert-action-bar">
+                                    <button class="btn btn-secondary btn-small" onclick="openEditModal('${record.id}')">✏️ Edit</button>
+                                    <button class="btn btn-danger btn-small" onclick="deleteRecord('${record.id}')">Delete</button>
+                                </div>
+                            </div>
+                        </div>`;
                     overallIndex++;
                     return card;
                 }).join('');
