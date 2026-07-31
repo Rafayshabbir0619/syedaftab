@@ -855,6 +855,122 @@
             border-top: 1px solid rgba(15, 23, 42, 0.07);
         }
 
+        /* ── Per-field inline editing ── */
+        .cert-field-row {
+            display: flex;
+            align-items: flex-start;
+            gap: 6px;
+        }
+
+        .cert-field-row .cert-field-display {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .cert-pencil {
+            flex-shrink: 0;
+            background: none;
+            border: 1px solid transparent;
+            border-radius: 8px;
+            color: #475569;
+            cursor: pointer;
+            font-size: 0.78rem;
+            padding: 3px 6px;
+            opacity: 0.85;
+            transition: opacity 0.15s, background 0.15s, color 0.15s, border-color 0.15s;
+            line-height: 1;
+            align-self: center;
+        }
+
+        .cert-pencil:hover {
+            opacity: 1;
+            background: rgba(37, 99, 235, 0.1);
+            border-color: rgba(37, 99, 235, 0.3);
+            color: var(--indigo);
+        }
+
+        /* Pencil on the right column (date-block) sits below each item */
+        .cert-date-row,
+        .cert-monogram-row {
+            flex-direction: column;
+            align-items: flex-end;
+        }
+
+        .cert-date-row .cert-pencil,
+        .cert-monogram-row .cert-pencil {
+            align-self: flex-end;
+        }
+
+        /* Images row is column-stacked */
+        .cert-images-row {
+            flex-direction: column;
+            align-items: flex-start;
+            margin-top: 8px;
+        }
+
+        .cert-pencil-block {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            margin-top: 10px;
+            padding: 6px 14px;
+            border: 1px solid rgba(37, 99, 235, 0.22);
+            border-radius: 10px;
+            color: var(--indigo);
+            font-size: 0.85rem;
+            font-weight: 600;
+            opacity: 0.7;
+        }
+
+        .cert-pencil-block:hover {
+            opacity: 1;
+            background: rgba(37, 99, 235, 0.08);
+        }
+
+        .cert-cat-display {
+            font-size: 0.82rem;
+            color: var(--text-muted);
+            display: block;
+            margin-top: 4px;
+        }
+
+        .cert-certno-empty {
+            font-size: 0.83rem;
+            color: var(--text-muted);
+            font-style: italic;
+        }
+
+        .cert-inline-editor {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            width: 100%;
+        }
+
+        .cert-inline-input {
+            width: 100%;
+            padding: 10px 14px;
+            border: 2px solid var(--indigo);
+            border-radius: 10px;
+            background: #f8fafc;
+            font-size: 0.95rem;
+            color: var(--text);
+            box-sizing: border-box;
+            font-family: inherit;
+        }
+
+        .cert-inline-input:focus {
+            outline: none;
+            border-color: var(--blue);
+            background: #fff;
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+        }
+
+        .cert-inline-actions {
+            display: flex;
+            gap: 8px;
+        }
+
         .image-picker-block {
             display: flex;
             flex-direction: column;
@@ -1969,6 +2085,7 @@
             <h2>Edit Record</h2>
             <form id="editForm" onsubmit="handleEditSubmit(event)">
                 <div class="form-grid">
+                    <div id="editMetaSection" style="display:contents;">
                     <div class="form-group full">
                         <label for="editTitle">Title *</label>
                         <input type="text" id="editTitle" required>
@@ -1994,6 +2111,7 @@
                         <label for="editDescription">Description *</label>
                         <textarea id="editDescription" required></textarea>
                     </div>
+                    </div><!-- /editMetaSection -->
                     <div class="form-group full image-picker-block">
                         <label>Photos</label>
                         <div class="image-picker-toolbar">
@@ -3384,33 +3502,57 @@
                             `<div class="gallery-card"><img src="${escapeHtml(src)}" alt="Photo ${idx + 1}" loading="lazy" decoding="async"><div class="gallery-pill">Photo ${idx + 1}</div></div>`
                           ).join('')}</div>`
                         : '';
-                    const monogramHtml = record.monogram
+
+                    const monogramContent = record.monogram
                         ? `<img class="training-monogram" src="${escapeHtml(record.monogram)}" alt="${escapeHtml(record.provider || '')} seal" loading="lazy" decoding="async">`
-                        : '';
-                    const certNoHtml = record.certificateNo
-                        ? `<div class="certificate-line">Certificate No: ${escapeHtml(record.certificateNo)}</div>`
-                        : '';
+                        : '<span class="cert-certno-empty">No monogram</span>';
+                    const rid = escapeHtml(record.id);
 
                     const card = `
                         <div class="timeline-item" style="margin-bottom: 22px;">
                             <div class="timeline-marker"><span class="marker-dot"></span></div>
-                            <div class="timeline-card certificate-highlight" style="position: relative;">
+                            <div class="timeline-card certificate-highlight cert-card" style="position: relative;" data-record-id="${rid}">
                                 <div class="training-top">
-                                    <div>
+                                    <div style="flex:1;min-width:0;">
                                         <span class="badge badge-certificate">Certificate</span>
-                                        <h3>${overallIndex}. ${escapeHtml(record.title)}</h3>
-                                        <p class="provider">${escapeHtml(record.provider || '')}</p>
+
+                                        <div class="cert-field-row" data-field="title">
+                                            <h3 class="cert-field-display" style="margin-bottom:6px;">${overallIndex}. ${escapeHtml(record.title)}</h3>
+                                            <button class="cert-pencil" onclick="certEditField('${rid}','title')" title="Edit title">✏️</button>
+                                        </div>
+
+                                        <div class="cert-field-row" data-field="provider">
+                                            <p class="provider cert-field-display" style="margin-bottom:4px;">${escapeHtml(record.provider || '')}</p>
+                                            <button class="cert-pencil" onclick="certEditField('${rid}','provider')" title="Edit provider">✏️</button>
+                                        </div>
+
+                                        <div class="cert-field-row" data-field="category">
+                                            <span class="cert-cat-display cert-field-display">${escapeHtml(record.category || '')}</span>
+                                            <button class="cert-pencil" onclick="certEditField('${rid}','category')" title="Edit category">✏️</button>
+                                        </div>
                                     </div>
+
                                     <div class="training-date-block">
-                                        <div class="training-date">${formatDate(record.date)}</div>
-                                        ${monogramHtml}
+                                        <div class="cert-field-row cert-date-row" data-field="date">
+                                            <div class="training-date cert-field-display">${formatDate(record.date)}</div>
+                                            <button class="cert-pencil" onclick="certEditField('${rid}','date')" title="Edit date">✏️</button>
+                                        </div>
+                                        <div class="cert-field-row cert-monogram-row" data-field="monogram">
+                                            <div class="cert-field-display">${monogramContent}</div>
+                                            <button class="cert-pencil" onclick="certEditField('${rid}','monogram')" title="Edit monogram">✏️</button>
+                                        </div>
                                     </div>
                                 </div>
-                                ${certNoHtml}
-                                ${galleryHtml}
+
+                                ${record.certificateNo ? `<div class="certificate-line" style="margin-bottom:14px;">Certificate No: ${escapeHtml(record.certificateNo)}</div>` : ''}
+
+                                <div class="cert-field-row cert-images-row" data-field="images">
+                                    <div class="cert-field-display" style="width:100%;">${galleryHtml}</div>
+                                    <button class="cert-pencil cert-pencil-block" onclick="certEditField('${rid}','images')">✏️ Edit Images &amp; Monogram</button>
+                                </div>
+
                                 <div class="cert-action-bar">
-                                    <button class="btn btn-secondary btn-small" onclick="openEditModal('${record.id}')">✏️ Edit</button>
-                                    <button class="btn btn-danger btn-small" onclick="deleteRecord('${record.id}')">Delete</button>
+                                    <button class="btn btn-danger btn-small" onclick="deleteRecord('${rid}')">Delete</button>
                                 </div>
                             </div>
                         </div>`;
@@ -3419,6 +3561,110 @@
                 }).join('');
                 return heading + cards;
             }).join('');
+        }
+
+        // ── Per-field inline edit for Manage Certificates ──
+
+        function certEditField(recordId, field) {
+            const card = document.querySelector(`.cert-card[data-record-id="${recordId}"]`);
+            if (!card) return;
+            const record = allRecords.find(r => r.id === recordId);
+            if (!record) return;
+
+            // Images and monogram open the modal showing only the image pickers
+            if (field === 'images' || field === 'monogram') {
+                openEditModal(recordId, true);
+                return;
+            }
+
+            const fieldRow = card.querySelector(`[data-field="${field}"]`);
+            if (!fieldRow || fieldRow.querySelector('.cert-inline-editor')) return;
+
+            const displayEl = fieldRow.querySelector('.cert-field-display');
+            const pencilBtn = fieldRow.querySelector('.cert-pencil');
+            if (!displayEl) return;
+
+            displayEl.style.display = 'none';
+            if (pencilBtn) pencilBtn.style.display = 'none';
+
+            let inputHtml;
+            if (field === 'title') {
+                inputHtml = `<input class="cert-inline-input" type="text" value="${escapeHtml(record.title)}" maxlength="200">`;
+            } else if (field === 'provider') {
+                inputHtml = `<input class="cert-inline-input" type="text" value="${escapeHtml(record.provider || '')}" maxlength="100" placeholder="Provider / Organisation">`;
+            } else if (field === 'certificateNo') {
+                inputHtml = `<input class="cert-inline-input" type="text" value="${escapeHtml(record.certificateNo || '')}" maxlength="80" placeholder="e.g. CERT-2024-001">`;
+            } else if (field === 'date') {
+                inputHtml = `<input class="cert-inline-input" type="text" value="${escapeHtml(record.date || '')}" placeholder="YYYY or YYYY-MM-DD" maxlength="20">`;
+            } else if (field === 'category') {
+                const cats = getAllCategories();
+                const opts = cats.map(c => `<option value="${escapeHtml(c)}"${c === record.category ? ' selected' : ''}>${escapeHtml(c)}</option>`).join('');
+                inputHtml = `<select class="cert-inline-input">${opts}</select>`;
+            } else {
+                displayEl.style.display = '';
+                if (pencilBtn) pencilBtn.style.display = '';
+                return;
+            }
+
+            const editor = document.createElement('div');
+            editor.className = 'cert-inline-editor';
+            editor.innerHTML = `
+                ${inputHtml}
+                <div class="cert-inline-actions">
+                    <button class="btn btn-primary btn-small" onclick="certSaveField('${escapeHtml(recordId)}','${field}',this)">✓ Save</button>
+                    <button class="btn btn-secondary btn-small" onclick="certCancelField('${escapeHtml(recordId)}','${field}')">✗ Cancel</button>
+                </div>`;
+            fieldRow.appendChild(editor);
+            editor.querySelector('.cert-inline-input')?.focus();
+        }
+
+        async function certSaveField(recordId, field, btnEl) {
+            const card = document.querySelector(`.cert-card[data-record-id="${recordId}"]`);
+            if (!card) return;
+            const record = allRecords.find(r => r.id === recordId);
+            if (!record) return;
+
+            const fieldRow = card.querySelector(`[data-field="${field}"]`);
+            if (!fieldRow) return;
+
+            const input = fieldRow.querySelector('.cert-inline-input');
+            if (!input) return;
+
+            const newValue = input.value.trim !== undefined ? input.value.trim() : input.value;
+
+            const origText = btnEl.textContent;
+            btnEl.textContent = '…';
+            btnEl.disabled = true;
+
+            const snapshot = { ...record };
+            record[field] = newValue;
+
+            try {
+                await saveRecord(record);
+            } catch (err) {
+                Object.assign(record, snapshot);
+                alert('Save failed: ' + err.message);
+                btnEl.textContent = origText;
+                btnEl.disabled = false;
+                return;
+            }
+
+            await loadCertificateRecords({ reload: false });
+        }
+
+        function certCancelField(recordId, field) {
+            const card = document.querySelector(`.cert-card[data-record-id="${recordId}"]`);
+            if (!card) return;
+            const fieldRow = card.querySelector(`[data-field="${field}"]`);
+            if (!fieldRow) return;
+
+            const displayEl = fieldRow.querySelector('.cert-field-display');
+            const pencilBtn = fieldRow.querySelector('.cert-pencil');
+            const editor = fieldRow.querySelector('.cert-inline-editor');
+
+            if (editor) editor.remove();
+            if (displayEl) displayEl.style.display = '';
+            if (pencilBtn) pencilBtn.style.display = '';
         }
 
         async function loadAchievementRecords({ reload = true } = {}) {
@@ -3470,11 +3716,14 @@
             }).join('');
         }
 
-        function openEditModal(recordId) {
+        let _editImagesOnly = false;
+
+        function openEditModal(recordId, imagesOnly = false) {
             currentEditingId = recordId;
             const record = allRecords.find(r => r.id === recordId);
 
             if (record) {
+                _editImagesOnly = imagesOnly;
                 populateEditCategoryDropdown();
                 document.getElementById('editTitle').value = record.title;
                 document.getElementById('editCategory').value = record.category;
@@ -3485,12 +3734,33 @@
                 setImagePickerItems('edit', record.images || []);
                 setImagePickerItems('editMonogram', record.monogram ? [record.monogram] : []);
 
+                const metaSection = document.getElementById('editMetaSection');
+                const form = document.getElementById('editForm');
+                const modalTitle = document.querySelector('#editModal h2');
+                if (imagesOnly) {
+                    metaSection.style.display = 'none';
+                    form.noValidate = true;
+                    modalTitle.textContent = 'Edit Images & Monogram';
+                } else {
+                    metaSection.style.display = 'contents';
+                    form.noValidate = false;
+                    modalTitle.textContent = 'Edit Record';
+                }
+
                 document.getElementById('editModal').classList.add('show');
             }
         }
 
         function closeEditModal() {
             document.getElementById('editModal').classList.remove('show');
+            // Restore meta section and validation for next open
+            const metaSection = document.getElementById('editMetaSection');
+            if (metaSection) metaSection.style.display = 'contents';
+            const form = document.getElementById('editForm');
+            if (form) form.noValidate = false;
+            const modalTitle = document.querySelector('#editModal h2');
+            if (modalTitle) modalTitle.textContent = 'Edit Record';
+            _editImagesOnly = false;
             clearImagePicker('edit');
             clearImagePicker('editMonogram');
             currentEditingId = null;
