@@ -1785,7 +1785,7 @@
             <button class="tab-btn" onclick="switchTab('add-achievement')">Add Achievement</button>
             <button class="tab-btn" onclick="switchTab('add-certificate')">Add Certificate</button>
             <button class="tab-btn" onclick="switchTab('manage-certificates')">Manage Certificates</button>
-            <button class="tab-btn" onclick="switchTab('manage-achievements')">Manage Achievements</button>
+            <button class="tab-btn" onclick="switchTab('manage-achievements')">Manage Courses/Trainings</button>
             <button class="tab-btn" onclick="switchTab('manage-lectures')">Manage Lectures</button>
             <button class="tab-btn" onclick="switchTab('manage-categories')">Manage Categories</button>
             <button class="tab-btn" onclick="switchTab('manage')">Manage All</button>
@@ -1946,10 +1946,6 @@
                             <label for="achievementDate">Date *</label>
                             <input type="date" id="achievementDate" required>
                         </div>
-                        <div class="form-group full">
-                            <label for="achievementDescription">Description</label>
-                            <textarea id="achievementDescription" placeholder="Detailed description of the achievement (optional)"></textarea>
-                        </div>
                         <div class="form-group full image-picker-block">
                             <label>Photos</label>
                             <div class="image-picker-toolbar">
@@ -2020,10 +2016,6 @@
                             <label for="certNumber">Certificate Number</label>
                             <input type="text" id="certNumber" placeholder="Certificate number (optional)">
                         </div>
-                        <div class="form-group full">
-                            <label for="certDescription">Description *</label>
-                            <textarea id="certDescription" required placeholder="Certificate details"></textarea>
-                        </div>
                         <div class="form-group full image-picker-block">
                             <label>Photos</label>
                             <div class="image-picker-toolbar">
@@ -2076,7 +2068,7 @@
         <!-- Manage Achievements Tab -->
         <div class="tab-content" id="manage-achievements">
             <div class="dashboard-section">
-                <h3 class="section-title">Manage Achievements &amp; Courses</h3>
+                <h3 class="section-title">Manage Courses/Trainings</h3>
                 <div id="achievementRecordsContainer" class="records-grid"></div>
             </div>
         </div>
@@ -3042,7 +3034,7 @@
                 provider: document.getElementById('achievementProvider').value,
                 date: document.getElementById('achievementDate').value,
                 duration: '1 Day',
-                description: document.getElementById('achievementDescription').value,
+                description: '',
                 certificateNo: '',
                 images: getImagePickerValues('achievement'),
                 monogram: getImagePickerValues('achievementMonogram')[0] || ''
@@ -3193,7 +3185,7 @@
                 provider: document.getElementById('certProvider').value,
                 date: document.getElementById('certDate').value,
                 duration: '1 Day',
-                description: document.getElementById('certDescription').value,
+                description: '',
                 certificateNo: document.getElementById('certNumber').value,
                 images: getImagePickerValues('certificate'),
                 monogram: getImagePickerValues('certMonogram')[0] || '',
