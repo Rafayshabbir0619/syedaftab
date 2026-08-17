@@ -1781,12 +1781,12 @@
 
         <div class="tabs">
             <button class="tab-btn active" onclick="switchTab('dashboard')">Dashboard</button>
-            <button class="tab-btn" onclick="switchTab('add-seminar')">Add Seminar</button>
-            <button class="tab-btn" onclick="switchTab('add-achievement')">Add Achievement</button>
-            <button class="tab-btn" onclick="switchTab('add-certificate')">Add Certificate</button>
-            <button class="tab-btn" onclick="switchTab('manage-certificates')">Manage Certificates</button>
-            <button class="tab-btn" onclick="switchTab('manage-achievements')">Manage Courses/Trainings</button>
+            <button class="tab-btn" onclick="switchTab('add-seminar')">Add Lectures</button>
+            <button class="tab-btn" onclick="switchTab('add-achievement')">Add Letters/Certificate of Appreciation</button>
+            <button class="tab-btn" onclick="switchTab('add-certificate')">Add Courses/Trainings</button>
             <button class="tab-btn" onclick="switchTab('manage-lectures')">Manage Lectures</button>
+            <button class="tab-btn" onclick="switchTab('manage-certificates')">Manage Letters/Certificate of Appreciation</button>
+            <button class="tab-btn" onclick="switchTab('manage-achievements')">Manage Courses/Trainings</button>
             <button class="tab-btn" onclick="switchTab('manage-categories')">Manage Categories</button>
             <button class="tab-btn" onclick="switchTab('manage')">Manage All</button>
         </div>
@@ -1854,8 +1854,8 @@
         <!-- Add Seminar Tab -->
         <div class="tab-content" id="add-seminar">
             <div class="form-container">
-                <h3 class="section-title">Add New Seminar</h3>
-                <div class="success-message" id="seminarSuccess">Seminar added successfully!</div>
+                <h3 class="section-title">Add New Lecture</h3>
+                <div class="success-message" id="seminarSuccess">Lecture added successfully!</div>
                 <form id="addSeminarForm" onsubmit="handleAddSeminar(event)">
                     <div class="form-grid">
                         <div class="form-group">
@@ -1907,7 +1907,7 @@
                     </div>
                     <div class="form-actions">
                         <button type="button" class="btn btn-secondary" onclick="resetSeminarForm()">Clear</button>
-                        <button type="submit" class="btn btn-primary">Add Seminar</button>
+                        <button type="submit" class="btn btn-primary">Add Lecture</button>
                     </div>
                 </form>
             </div>
@@ -1916,7 +1916,7 @@
         <!-- Add Achievement Tab -->
         <div class="tab-content" id="add-achievement">
             <div class="form-container">
-                <h3 class="section-title">Add New Achievement</h3>
+                <h3 class="section-title">Add New Letter/Certificate of Appreciation</h3>
                 <div class="success-message" id="achievementSuccess">Achievement added successfully!</div>
                 <form id="addAchievementForm" onsubmit="handleAddAchievement(event)">
                     <div class="form-grid">
@@ -1981,7 +1981,7 @@
                     </div>
                     <div class="form-actions">
                         <button type="button" class="btn btn-secondary" onclick="resetAchievementForm()">Clear</button>
-                        <button type="submit" class="btn btn-primary">Add Achievement</button>
+                        <button type="submit" class="btn btn-primary">Add Letter/Certificate of Appreciation</button>
                     </div>
                 </form>
             </div>
@@ -1990,7 +1990,7 @@
         <!-- Add Certificate Tab -->
         <div class="tab-content" id="add-certificate">
             <div class="form-container">
-                <h3 class="section-title">Add Profile Certificate</h3>
+                <h3 class="section-title">Add Course/Training</h3>
                 <div class="success-message" id="certSuccess">Certificate added successfully!</div>
                 <form id="addCertForm" onsubmit="handleAddCertificate(event)">
                     <div class="form-grid">
@@ -2051,7 +2051,7 @@
                     </div>
                     <div class="form-actions">
                         <button type="button" class="btn btn-secondary" onclick="resetCertForm()">Clear</button>
-                        <button type="submit" class="btn btn-primary">Add Certificate</button>
+                        <button type="submit" class="btn btn-primary">Add Course/Training</button>
                     </div>
                 </form>
             </div>
@@ -2060,7 +2060,7 @@
         <!-- Manage All Tab -->
         <div class="tab-content" id="manage-certificates">
             <div class="dashboard-section">
-                <h3 class="section-title">Manage Certificates</h3>
+                <h3 class="section-title">Manage Letters/Certificate of Appreciation</h3>
                 <div id="certificateRecordsContainer" class="records-grid"></div>
             </div>
         </div>
@@ -2076,7 +2076,7 @@
         <!-- Manage Lectures Tab -->
         <div class="tab-content" id="manage-lectures">
             <div class="dashboard-section">
-                <h3 class="section-title">Manage Lectures Delivered</h3>
+                <h3 class="section-title">Manage Lectures</h3>
                 <div id="lectureRecordsContainer"></div>
             </div>
         </div>
@@ -3335,7 +3335,7 @@
             const recent = profileCertificates.slice(-5).reverse();
             container.innerHTML = recent.length
                 ? recent.map(record => renderDashboardCard(record, true)).join('')
-                : '<div class="empty-state"><p>No profile certificates yet. Add one from the Add Certificate tab.</p></div>';
+                : '<div class="empty-state"><p>No profile certificates yet. Add one from the Add Letters/Certificate of Appreciation or Add Courses/Trainings tab.</p></div>';
         }
 
         function groupRecordsByCategory(records) {
@@ -3358,7 +3358,7 @@
             const container = document.getElementById('dashboardSeminars');
 
             if (!seminars.length) {
-                container.innerHTML = '<div class="empty-state"><p>No seminars yet. Add one from the Add Seminar tab.</p></div>';
+                container.innerHTML = '<div class="empty-state"><p>No seminars yet. Add one from the Add Lectures tab.</p></div>';
                 return;
             }
 
@@ -3509,7 +3509,7 @@
             const certificates = allRecords.filter(record => record.type === 'Certificate');
 
             if (certificates.length === 0) {
-                container.innerHTML = '<div class="empty-state"><p>No certificates found. Add one from the Add Certificate tab.</p></div>';
+                container.innerHTML = '<div class="empty-state"><p>No certificates found. Add one from the Add Letters/Certificate of Appreciation or Add Courses/Trainings tab.</p></div>';
                 return;
             }
 
@@ -3628,7 +3628,7 @@
 
             let inputHtml;
             if (field === 'title') {
-                inputHtml = `<input class="cert-inline-input" type="text" value="${escapeHtml(record.title)}" maxlength="200">`;
+                inputHtml = `<input class="cert-inline-input" type="text" value="${escapeHtml(record.title)}" maxlength="500">`;
             } else if (field === 'provider') {
                 inputHtml = `<input class="cert-inline-input" type="text" value="${escapeHtml(record.provider || '')}" maxlength="100" placeholder="Provider / Organisation">`;
             } else if (field === 'certificateNo') {
@@ -3715,7 +3715,7 @@
             const achievements = allRecords.filter(r => r.type === 'Achievement' || r.type === 'Course');
 
             if (achievements.length === 0) {
-                container.innerHTML = '<div class="empty-state"><p>No achievements found. Add one from the Add Achievement tab.</p></div>';
+                container.innerHTML = '<div class="empty-state"><p>No courses or trainings found.</p></div>';
                 return;
             }
 
@@ -3834,7 +3834,7 @@
 
             let inputHtml;
             if (field === 'title') {
-                inputHtml = `<input class="cert-inline-input" type="text" value="${escapeHtml(record.title)}" maxlength="200">`;
+                inputHtml = `<input class="cert-inline-input" type="text" value="${escapeHtml(record.title)}" maxlength="500">`;
             } else if (field === 'provider') {
                 inputHtml = `<input class="cert-inline-input" type="text" value="${escapeHtml(record.provider || '')}" maxlength="100" placeholder="Provider / Organisation">`;
             } else if (field === 'date') {
@@ -3925,7 +3925,7 @@
             const lectures = allRecords.filter(r => r.type === 'Seminar');
 
             if (lectures.length === 0) {
-                container.innerHTML = '<div class="empty-state"><p>No lectures found. Add one from the Add Seminar tab.</p></div>';
+                container.innerHTML = '<div class="empty-state"><p>No lectures found. Add one from the Add Lectures tab.</p></div>';
                 return;
             }
 
@@ -4036,7 +4036,7 @@
 
             let inputHtml;
             if (field === 'title') {
-                inputHtml = `<input class="cert-inline-input" type="text" value="${escapeHtml(record.title)}" maxlength="200">`;
+                inputHtml = `<input class="cert-inline-input" type="text" value="${escapeHtml(record.title)}" maxlength="500">`;
             } else if (field === 'provider') {
                 inputHtml = `<input class="cert-inline-input" type="text" value="${escapeHtml(record.provider || '')}" maxlength="100" placeholder="Provider / Organisation">`;
             } else if (field === 'date') {
@@ -4287,7 +4287,7 @@
         });
 
         // ── Inactivity auto-logout ──────────────────────────────────────────
-        const INACTIVITY_MS   = 5 * 60 * 1000;  // 5 minutes total
+        const INACTIVITY_MS   = 30 * 60 * 1000;  // 30 minutes total
         const WARNING_BEFORE  = 60 * 1000;       // show warning 60 s before logout
         const WARNING_TICK_MS = 1000;
 
@@ -4335,9 +4335,10 @@
             clearInterval(countdownInterval);
         }
 
+        const INACTIVITY_EVENTS = ['mousemove', 'mousedown', 'keydown', 'input', 'wheel', 'touchstart', 'scroll', 'click'];
+
         function startInactivityWatch() {
-            const events = ['mousemove', 'mousedown', 'keydown', 'touchstart', 'scroll', 'click'];
-            events.forEach(e => document.addEventListener(e, resetInactivityTimer, { passive: true }));
+            INACTIVITY_EVENTS.forEach(e => document.addEventListener(e, resetInactivityTimer, { passive: true }));
             scheduleInactivityTimers();
         }
 
@@ -4346,8 +4347,7 @@
             clearTimeout(warningTimer);
             clearInterval(countdownInterval);
             hideInactivityWarning();
-            const events = ['mousemove', 'mousedown', 'keydown', 'touchstart', 'scroll', 'click'];
-            events.forEach(e => document.removeEventListener(e, resetInactivityTimer));
+            INACTIVITY_EVENTS.forEach(e => document.removeEventListener(e, resetInactivityTimer));
         }
     </script>
 </body>
